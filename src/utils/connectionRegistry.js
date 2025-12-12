@@ -1,0 +1,121 @@
+/**
+ * File: src/utils/connectionRegistry.js
+ * Description: Connection registry that manages WebSocket connections and routes messages to appropriate message queues
+ *
+ * Maintainers: iBenzene, bbbugg, Hype3808
+ * Original Author: Ellinav
+ */
+
+const { EventEmitter } = require("events");
+const MessageQueue = require("./messageQueue");
+
+/**
+ * Connection Registry Module
+ * Responsible for managing WebSocket connections and message queues
+ */
+class ConnectionRegistry extends EventEmitter {
+    constructor(logger) {
+        super();
+        this.logger = logger;
+        this.connections = new Set();
+        this.messageQueues = new Map();
+        this.reconnectGraceTimer = null;
+    }
+
+    addConnection(websocket, clientInfo) {
+        if (this.reconnectGraceTimer) {
+            clearTimeout(this.reconnectGraceTimer);
+            this.reconnectGraceTimer = null;
+            this.logger.info("[Server] New connection detected during grace period, canceling disconnect handling.");
+        }
+
+        this.connections.add(websocket);
+        this.logger.info(
+            `[Server] Internal WebSocket client connected (from: ${clientInfo.address})`
+        );
+        websocket.on("message", data =>
+            this._handleIncomingMessage(data.toString())
+        );
+        websocket.on("close", () => this._removeConnection(websocket));
+        websocket.on("error", error =>
+            this.logger.error(`[Server] Internal WebSocket connection error: ${error.message}`)
+        );
+        this.emit("connectionAdded", websocket);
+    }
+
+    _removeConnection(websocket) {
+        this.connections.delete(websocket);
+        this.logger.warn("[Server] Internal WebSocket client disconnected.");
+
+        this.logger.info("[Server] Starting 5-second reconnect grace period...");
+        this.reconnectGraceTimer = setTimeout(() => {
+            this.logger.error(
+                "[Server] Grace period ended, no reconnection detected. Connection lost confirmed, cleaning up all pending requests..."
+            );
+            this.messageQueues.forEach(queue => queue.close());
+            this.messageQueues.clear();
+            this.emit("connectionLost");
+        }, 5000);
+
+        this.emit("connectionRemoved", websocket);
+    }
+
+    _handleIncomingMessage(messageData) {
+        try {
+            const parsedMessage = JSON.parse(messageData);
+            const requestId = parsedMessage.request_id;
+            if (!requestId) {
+                this.logger.warn("[Server] Received invalid message: missing request_id");
+                return;
+            }
+            const queue = this.messageQueues.get(requestId);
+            if (queue) {
+                this._routeMessage(parsedMessage, queue);
+            } else {
+                this.logger.warn(`[Server] Received message for unknown or outdated request ID: ${requestId}`);
+            }
+        } catch (error) {
+            this.logger.error("[Server] Failed to parse internal WebSocket message");
+        }
+    }
+
+    _routeMessage(message, queue) {
+        const { event_type } = message;
+        switch (event_type) {
+            case "response_headers":
+            case "chunk":
+            case "error":
+                queue.enqueue(message);
+                break;
+            case "stream_close":
+                queue.enqueue({ type: "STREAM_END" });
+                break;
+            default:
+                this.logger.warn(`[Server] Unknown internal event type: ${event_type}`);
+        }
+    }
+
+    hasActiveConnections() {
+        return this.connections.size > 0;
+    }
+
+    getFirstConnection() {
+        return this.connections.values().next().value;
+    }
+
+    createMessageQueue(requestId) {
+        const queue = new MessageQueue();
+        this.messageQueues.set(requestId, queue);
+        return queue;
+    }
+
+    removeMessageQueue(requestId) {
+        const queue = this.messageQueues.get(requestId);
+        if (queue) {
+            queue.close();
+            this.messageQueues.delete(requestId);
+        }
+    }
+}
+
+module.exports = ConnectionRegistry;

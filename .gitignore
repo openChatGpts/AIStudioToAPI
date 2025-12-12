@@ -1,0 +1,16 @@
+.vscode/
+.DS_Store
+
+# Node.js dependencies
+node_modules/
+package-lock.json
+
+# Camoufox browser
+camoufox/
+camoufox*.zip
+
+# Authentication files
+configs/auth*.json
+
+# Temporary files
+tmp/

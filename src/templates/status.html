@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="title">Proxy Service Status</title>
+    <style>
+        body {
+            font-family: 'SF Mono', 'Consolas', 'Menlo', monospace;
+            background-color: #f0f2f5;
+            color: #333;
+            padding: 2em;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 1em 2em 2em 2em;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        h1,
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5em;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f0f0f0;
+            font-size: 1.1em;
+            padding: 1.5em;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.6;
+        }
+
+        #log-container {
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .status-ok {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .status-error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .label {
+            display: inline-block;
+            width: 220px;
+            box-sizing: border-box;
+        }
+
+        .dot {
+            height: 10px;
+            width: 10px;
+            background-color: #bbb;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+            animation: blink 1s infinite alternate;
+        }
+
+        @keyframes blink {
+            from {
+                opacity: 0.3;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .action-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .action-group button,
+        .action-group select {
+            font-size: 1em;
+            border: 1px solid #ccc;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .action-group button:hover {
+            opacity: 0.85;
+        }
+
+        .action-group button {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .action-group select {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        .lang-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: opacity 0.3s;
+        }
+
+        .lang-switcher:hover {
+            opacity: 0.85;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <button class="lang-switcher" onclick="toggleLanguage()">中文</button>
+        <h1><span data-i18n="heading">Proxy Service Status</span> <span class="dot"></span></h1>
+        <div id="status-section">
+            <pre>
+<span class="label" data-i18n="serviceStatus">Service Status</span>: <span class="status-ok" data-i18n="running">Running</span>
+<span class="label" data-i18n="browserConnection">Browser Connection</span>: <span class="{{browserConnectedClass}}">{{browserConnected}}</span>
+--- <span data-i18n="serviceConfig">Service Configuration</span> ---
+<span class="label" data-i18n="streamingMode">Streaming Mode</span>: {{streamingMode}}
+<span class="label" data-i18n="forceThinking">Force Thinking</span>: {{forceThinking}}
+<span class="label" data-i18n="apiKey">API Key</span>: {{apiKeySource}}
+--- <span data-i18n="accountStatus">Account Status</span> ---
+<span class="label" data-i18n="currentAccount">Current Active Account</span>: #{{currentAuthIndex}}
+<span class="label" data-i18n="usageCount">Usage Count</span>: {{usageCount}}
+<span class="label" data-i18n="consecutiveFailures">Consecutive Failures</span>: {{failureCount}}
+<span class="label" data-i18n="totalScanned">Total Scanned Accounts</span>: {{totalScannedAccounts}}
+{{accountDetailsHtml}}
+<span class="label" data-i18n="formatErrors">Format Errors (Ignored)</span>: {{formatErrors}}
+        </pre>
+        </div>
+        <div id="actions-section" style="margin-top: 2em;">
+            <h2 data-i18n="actionsPanel">Actions Panel</h2>
+            <div class="action-group">
+                <select id="accountIndexSelect">{{accountOptions}}</select>
+                <button onclick="switchSpecificAccount()" data-i18n="btnSwitchAccount">Switch Account</button>
+                <button onclick="toggleStreamingMode()" data-i18n="btnToggleStreaming">Toggle Streaming Mode</button>
+                <button onclick="toggleForceThinking()" data-i18n="btnToggleThinking">Toggle Force Thinking</button>
+            </div>
+        </div>
+        <div id="log-section" style="margin-top: 2em;">
+            <h2><span data-i18n="realtimeLogs">Real-time Logs</span> (<span data-i18n="latestEntries">Latest</span> {{logCount}} <span data-i18n="entries">entries</span>)</h2>
+            <pre id="log-container">{{logs}}</pre>
+        </div>
+    </div>
+    <script>
+        // ========== Internationalization Support ==========
+        const translations = {
+            en: {
+                title: 'Proxy Service Status',
+                heading: 'Proxy Service Status',
+                serviceStatus: 'Service Status',
+                running: 'Running',
+                browserConnection: 'Browser Connection',
+                serviceConfig: 'Service Configuration',
+                streamingMode: 'Streaming Mode',
+                forceThinking: 'Force Thinking',
+                apiKey: 'API Key',
+                accountStatus: 'Account Status',
+                currentAccount: 'Current Active Account',
+                usageCount: 'Usage Count',
+                consecutiveFailures: 'Consecutive Failures',
+                totalScanned: 'Total Scanned Accounts',
+                formatErrors: 'Format Errors (Ignored)',
+                actionsPanel: 'Actions Panel',
+                btnSwitchAccount: 'Switch Account',
+                btnToggleStreaming: 'Toggle Streaming Mode',
+                btnToggleThinking: 'Toggle Force Thinking',
+                realtimeLogs: 'Real-time Logs',
+                latestEntries: 'Latest',
+                entries: 'entries',
+                // Dynamic content translations
+                account: 'Account',
+                immediateSwitchCodes: 'Immediate Switch (Codes)',
+                confirmSwitch: 'Are you sure you want to switch to account',
+                operationInProgress: 'Operation in progress...',
+                enterNewMode: 'Please enter new streaming mode (real or fake):',
+                invalidMode: 'Invalid mode!',
+                settingFailed: 'Setting failed: '
+            },
+            zh: {
+                title: '代理服务状态',
+                heading: '代理服务状态',
+                serviceStatus: '服务状态',
+                running: '运行中',
+                browserConnection: '浏览器连接',
+                serviceConfig: '服务配置',
+                streamingMode: '流式模式',
+                forceThinking: '强制思考',
+                apiKey: 'API 密钥',
+                accountStatus: '账户状态',
+                currentAccount: '当前活动账户',
+                usageCount: '使用次数',
+                consecutiveFailures: '连续失败次数',
+                totalScanned: '已扫描账户总数',
+                formatErrors: '格式错误（已忽略）',
+                actionsPanel: '操作面板',
+                btnSwitchAccount: '切换账户',
+                btnToggleStreaming: '切换流式模式',
+                btnToggleThinking: '切换强制思考',
+                realtimeLogs: '实时日志',
+                latestEntries: '最新',
+                entries: '条',
+                // Dynamic content translations
+                account: '账户',
+                immediateSwitchCodes: '立即切换（代码）',
+                confirmSwitch: '确定要切换到账户',
+                operationInProgress: '操作进行中...',
+                enterNewMode: '请输入新的流式模式（real 或 fake）：',
+                invalidMode: '无效的模式！',
+                settingFailed: '设置失败：'
+            }
+        };
+
+        let currentLang = localStorage.getItem('lang') || 'en';
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('lang', lang);
+            document.documentElement.lang = lang;
+
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+
+            // Update language switcher button
+            const switcher = document.querySelector('.lang-switcher');
+            if (switcher) {
+                switcher.textContent = lang === 'en' ? '中文' : 'English';
+            }
+
+            // Refresh content to apply translations
+            updateContent();
+        }
+
+        function toggleLanguage() {
+            const newLang = currentLang === 'en' ? 'zh' : 'en';
+            applyLanguage(newLang);
+        }
+
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
+
+        // ========== Original Features ==========
+        const CURRENT_STREAMING_MODE = '{{streamingMode}}';
+
+        function updateContent() {
+            fetch('/api/status').then(r => r.json()).then(data => {
+                const statusPre = document.querySelector('#status-section pre');
+                const accountDetailsHtml = data.status.accountDetails.map(acc =>
+                    '<span class="label" style="padding-left: 20px;">' + t('account') + ' ' + acc.index + '</span>: ' + acc.name
+                ).join('\n');
+                statusPre.innerHTML =
+                    '<span class="label">' + t('serviceStatus') + '</span>: <span class="status-ok">' + t('running') + '</span>\n' +
+                    '<span class="label">' + t('browserConnection') + '</span>: <span class="' + (data.status.browserConnected ? "status-ok" : "status-error") + '">' + data.status.browserConnected + '</span>\n' +
+                    '--- ' + t('serviceConfig') + ' ---\n' +
+                    '<span class="label">' + t('streamingMode') + '</span>: ' + data.status.streamingMode + '\n' +
+                    '<span class="label">' + t('forceThinking') + '</span>: ' + data.status.forceThinking + '\n' +
+                    '<span class="label">' + t('immediateSwitchCodes') + '</span>: ' + data.status.immediateSwitchStatusCodes + '\n' +
+                    '<span class="label">' + t('apiKey') + '</span>: ' + data.status.apiKeySource + '\n' +
+                    '--- ' + t('accountStatus') + ' ---\n' +
+                    '<span class="label">' + t('currentAccount') + '</span>: #' + data.status.currentAuthIndex + '\n' +
+                    '<span class="label">' + t('usageCount') + '</span>: ' + data.status.usageCount + '\n' +
+                    '<span class="label">' + t('consecutiveFailures') + '</span>: ' + data.status.failureCount + '\n' +
+                    '<span class="label">' + t('totalScanned') + '</span>: ' + data.status.initialIndices + '\n' +
+                    accountDetailsHtml + '\n' +
+                    '<span class="label">' + t('formatErrors') + '</span>: ' + data.status.invalidIndices;
+
+                const logContainer = document.getElementById('log-container');
+                const logTitle = document.querySelector('#log-section h2');
+                const isScrolledToBottom = logContainer.scrollHeight - logContainer.clientHeight <= logContainer.scrollTop + 1;
+                logTitle.innerHTML = '<span data-i18n="realtimeLogs">' + t('realtimeLogs') + '</span> (<span data-i18n="latestEntries">' + t('latestEntries') + '</span> ' + data.logCount + ' <span data-i18n="entries">' + t('entries') + '</span>)';
+                logContainer.innerText = data.logs;
+                if (isScrolledToBottom) { logContainer.scrollTop = logContainer.scrollHeight; }
+            }).catch(err => console.error('Error:', err));
+        }
+
+        function switchSpecificAccount() {
+            const targetIndex = document.getElementById('accountIndexSelect').value;
+            if (!confirm(t('confirmSwitch') + ' #' + targetIndex + '?')) return;
+            fetch('/api/switch-account', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetIndex: parseInt(targetIndex, 10) })
+            })
+                .then(res => res.text()).then(data => { alert(data); updateContent(); })
+                .catch(err => { alert(t('operationInProgress')); updateContent(); });
+        }
+
+        function toggleStreamingMode() {
+            const newMode = prompt(t('enterNewMode'), CURRENT_STREAMING_MODE);
+            if (newMode === 'fake' || newMode === 'real') {
+                fetch('/api/set-mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: newMode })
+                })
+                    .then(res => res.text()).then(data => { alert(data); updateContent(); })
+                    .catch(err => alert(t('settingFailed') + err));
+            } else if (newMode !== null) {
+                alert(t('invalidMode'));
+            }
+        }
+
+        function toggleForceThinking() {
+            fetch('/api/toggle-force-thinking', { method: 'POST' })
+                .then(res => res.text()).then(data => { alert(data); updateContent(); })
+                .catch(err => alert(t('settingFailed') + err));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguage(currentLang);
+            const scheduleNextUpdate = () => {
+                const randomInterval = 4000 + Math.floor(Math.random() * 3000); // Random interval 4-7 seconds
+                setTimeout(() => {
+                    updateContent();
+                    scheduleNextUpdate(); // Recursively schedule next update
+                }, randomInterval);
+            };
+            scheduleNextUpdate(); // Start random interval refresh
+        });
+    </script>
+</body>
+
+</html>

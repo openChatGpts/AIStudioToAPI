@@ -1,0 +1,26 @@
+{
+    "name": "aistudio-to-api",
+    "version": "1.0.0",
+    "author": "Ellinav",
+    "description": "Encapsulate Gemini models on AI Studio as API services.",
+    "main": "main.js",
+    "scripts": {
+        "start": "node main.js",
+        "save-auth": "node scripts/saveAuth.js",
+        "setup-auth": "scripts\\setupAuth.bat",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix"
+    },
+    "dependencies": {
+        "basic-auth": "^2.0.1",
+        "cookie-parser": "^1.4.6",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "express-session": "^1.18.0",
+        "playwright": "^1.53.1",
+        "ws": "^8.17.0"
+    },
+    "devDependencies": {
+        "eslint": "^8.57.1"
+    }
+}

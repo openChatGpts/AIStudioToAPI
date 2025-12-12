@@ -1,0 +1,23 @@
+# ESLint ignore configuration
+
+# Dependencies
+node_modules/
+
+# Browser binary
+camoufox/
+
+# Temporary files
+tmp/
+
+# Config files
+configs/
+
+# Templates (if they're not JS code)
+src/templates/
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
