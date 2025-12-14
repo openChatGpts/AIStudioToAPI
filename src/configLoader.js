@@ -123,21 +123,29 @@ class ConfigLoader {
         try {
             if (fs.existsSync(modelsPath)) {
                 const modelsFileContent = fs.readFileSync(modelsPath, "utf-8");
-                config.modelList = JSON.parse(modelsFileContent);
-                this.logger.info(
-                    `[System] Successfully loaded ${config.modelList.length} models from models.json.`
-                );
+                const modelsData = JSON.parse(modelsFileContent);
+                if (modelsData && modelsData.models) {
+                    config.modelList = modelsData.models;
+                    this.logger.info(
+                        `[System] Successfully loaded ${config.modelList.length} models from models.json.`
+                    );
+                } else {
+                    this.logger.warn(
+                        `[System] models.json is not in the expected format, using default model list.`
+                    );
+                    config.modelList = [{ name: "models/gemini-2.5-flash-lite" }];
+                }
             } else {
                 this.logger.warn(
                     `[System] models.json file not found, using default model list.`
                 );
-                config.modelList = ["gemini-2.5-flash-lite"];
+                config.modelList = [{ name: "models/gemini-2.5-flash-lite" }];
             }
         } catch (error) {
             this.logger.error(
                 `[System] Failed to read or parse models.json: ${error.message}, using default model list.`
             );
-            config.modelList = ["gemini-2.5-flash-lite"];
+            config.modelList = [{ name: "models/gemini-2.5-flash-lite" }];
         }
 
         this._printConfiguration(config);

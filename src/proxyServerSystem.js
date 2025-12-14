@@ -257,11 +257,12 @@ class ProxyServerSystem extends EventEmitter {
 
         // API routes
         app.get(["/v1/models"], (req, res) => {
-            const modelIds = this.config.modelList || ["gemini-2.5-pro"];
             // OpenAI format
-            const models = modelIds.map(id => ({
+            const models = this.config.modelList.map(model => ({
+                context_window: model.inputTokenLimit,
                 created: Math.floor(Date.now() / 1000),
-                id,
+                id: model.name.replace("models/", ""),
+                max_tokens: model.outputTokenLimit,
                 object: "model",
                 owned_by: "google",
             }));
@@ -274,16 +275,8 @@ class ProxyServerSystem extends EventEmitter {
         });
 
         app.get(["/v1beta/models"], (req, res) => {
-            const modelIds = this.config.modelList || ["gemini-2.5-pro"];
-            // Gemini format
-            const models = modelIds.map(id => ({
-                displayName: id,
-                name: `models/${id}`,
-                supportedGenerationMethods: ["generateContent", "streamGenerateContent"],
-            }));
-
             res.status(200)
-                .json({ models });
+                .json({ models: this.config.modelList });
         });
 
         app.post("/v1/chat/completions", (req, res) => {
