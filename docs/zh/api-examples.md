@@ -38,6 +38,44 @@ curl -X POST http://localhost:7860/v1/chat/completions \
   }'
 ```
 
+### 🖼️ 生成图片
+
+#### 流式生成图片
+
+```bash
+curl -X POST http://localhost:7860/v1/chat/completions \ 
+  -H "Content-Type: application/json" \ 
+  -H "Authorization: Bearer your-api-key-1" \ 
+  -d '{ 
+    "model": "gemini-2.5-flash-image", 
+    "messages": [ 
+      { 
+        "role": "user", 
+        "content": "生成一只小猫" 
+      } 
+    ], 
+    "stream": false
+  }'
+```
+
+#### 非流式生成图片
+
+```bash
+curl -X POST http://localhost:7860/v1/chat/completions \ 
+  -H "Content-Type: application/json" \ 
+  -H "Authorization: Bearer your-api-key-1" \ 
+  -d '{ 
+    "model": "gemini-2.5-flash-image", 
+    "messages": [ 
+      { 
+        "role": "user", 
+        "content": "生成一只小猫" 
+      } 
+    ], 
+    "stream": true
+  }'
+```
+
 ## ♊ Gemini 原生 API 格式
 
 ```bash
@@ -71,6 +109,48 @@ curl -X POST http://localhost:7860/v1beta/models/gemini-2.5-flash-lite:streamGen
         "parts": [
           {
             "text": "写一首关于秋天的诗"
+          }
+        ]
+      }
+    ]
+  }'
+```
+
+### 🖼️ 生成图片
+
+#### 流式生成图片
+
+```bash
+curl -X POST http://localhost:7860/v1beta/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key-1" \
+  -d '{
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "生成一只小猫"
+          }
+        ]
+      }
+    ]
+  }'
+```
+
+#### 非流式生成图片
+
+```bash
+curl -X POST http://localhost:7860/v1beta/models/gemini-2.5-flash-image:generateContent \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key-1" \
+  -d '{
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "生成一只小猫"
           }
         ]
       }

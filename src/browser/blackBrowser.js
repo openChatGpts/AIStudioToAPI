@@ -215,7 +215,7 @@ class RequestProcessor {
 
                 // --- Module 1: Smart Filtering (Keep) ---
                 const isImageModel
-                    = requestSpec.path.includes("-image-")
+                    = requestSpec.path.includes("-image")
                     || requestSpec.path.includes("imagen");
 
                 if (isImageModel) {

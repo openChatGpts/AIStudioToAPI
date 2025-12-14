@@ -568,9 +568,6 @@ class RequestHandler {
                 }
             }
 
-            // Intelligent image processing
-            fullBody = this._processImageInResponse(fullBody);
-
             try {
                 const fullResponse = JSON.parse(fullBody);
                 const finishReason

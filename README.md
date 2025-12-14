@@ -149,15 +149,15 @@ If you need to access via a domain name or want unified management at the revers
 This endpoint is processed and then forwarded to the official Gemini API format endpoint.
 
 *   `GET /openai/v1/models`: List models.
-*   `POST /openai/v1/chat/completions`: Chat completion, supports non-streaming, real streaming, and fake streaming.
+*   `POST /openai/v1/chat/completions`: Chat completion and image generation, supports non-streaming, real streaming, and fake streaming.
 
 ### ♊ Gemini Native API Format
 
 This endpoint is forwarded to the official Gemini API format endpoint.
 
 *   `GET /models`: List available Gemini models.
-*   `POST /models/{model_name}:generateContent`: Generate content.
-*   `POST /models/{model_name}:streamGenerateContent`: Stream content generation, supports real and fake streaming.
+*   `POST /models/{model_name}:generateContent`: Generate content and images.
+*   `POST /models/{model_name}:streamGenerateContent`: Stream content and image generation, supports real and fake streaming.
 
 > 📖 For detailed API usage examples, see: [API Usage Examples](docs/en/api-examples.md)
 
