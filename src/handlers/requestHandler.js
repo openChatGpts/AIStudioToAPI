@@ -450,7 +450,7 @@ class RequestHandler {
             } catch (e) {
                 // Ignore errors when parsing finish reason
             }
-            res.write("data: [DONE]\n\n");
+            // Removed [DONE] to comply with Gemini native streaming format
         } catch (error) {
             this._handleRequestError(error, res);
         } finally {
