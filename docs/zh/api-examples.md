@@ -52,7 +52,7 @@ curl -X POST http://localhost:7860/v1/chat/completions \
         "content": "生成一只小猫" 
       } 
     ], 
-    "stream": true
+    "stream": false
   }'
 ```
 
@@ -70,7 +70,7 @@ curl -X POST http://localhost:7860/v1/chat/completions \
         "content": "生成一只小猫" 
       } 
     ], 
-    "stream": false
+    "stream": true
   }'
 ```
 
