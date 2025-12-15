@@ -174,9 +174,10 @@ class RequestHandler {
                 this.logger.info(
                     `[Auth] Rotation count reached switching threshold (${this.authSwitcher.usageCount}/${this.config.switchOnUses}), will automatically switch account in background...`
                 );
-                this.authSwitcher.switchToNextAuth().catch(err => {
-                    this.logger.error(`[Auth] Background account switching task failed: ${err.message}`);
-                });
+                this.authSwitcher.switchToNextAuth()
+                    .catch(err => {
+                        this.logger.error(`[Auth] Background account switching task failed: ${err.message}`);
+                    });
                 this.needsSwitchingAfterRequest = false;
             }
         }
@@ -259,13 +260,14 @@ class RequestHandler {
                     this.authSwitcher.failureCount = 0;
                 }
 
-                res.status(200).set({
-                    "Cache-Control": "no-cache",
-                    Connection: "keep-alive",
-                    "Content-Type": "text/event-stream",
-                });
+                res.status(200)
+                    .set({
+                        "Cache-Control": "no-cache",
+                        Connection: "keep-alive",
+                        "Content-Type": "text/event-stream",
+                    });
                 this.logger.info(`[Adapter] OpenAI streaming response (Real Mode) started...`);
-                await this._streamOpenAIResponse(messageQueue, res, model, requestId);
+                await this._streamOpenAIResponse(messageQueue, res, model);
             } else {
                 const result = await this._executeRequestWithRetries(proxyRequest, messageQueue);
 
@@ -291,11 +293,12 @@ class RequestHandler {
                 }
 
                 if (isOpenAIStream) { // Fake stream
-                    res.status(200).set({
-                        "Cache-Control": "no-cache",
-                        Connection: "keep-alive",
-                        "Content-Type": "text/event-stream",
-                    });
+                    res.status(200)
+                        .set({
+                            "Cache-Control": "no-cache",
+                            Connection: "keep-alive",
+                            "Content-Type": "text/event-stream",
+                        });
                     this.logger.info(`[Adapter] OpenAI streaming response (Fake Mode) started...`);
                     let fullBody = "";
                     let streaming = true;
@@ -326,9 +329,10 @@ class RequestHandler {
                 this.logger.info(
                     `[Auth] Rotation count reached switching threshold, will automatically switch account in background...`
                 );
-                this.authSwitcher.switchToNextAuth().catch(err => {
-                    this.logger.error(`[Auth] Background account switching task failed: ${err.message}`);
-                });
+                this.authSwitcher.switchToNextAuth()
+                    .catch(err => {
+                        this.logger.error(`[Auth] Background account switching task failed: ${err.message}`);
+                    });
                 this.needsSwitchingAfterRequest = false;
             }
         }
@@ -414,23 +418,81 @@ class RequestHandler {
                 }
             }
 
-            if (fullData) {
-                res.write(`data: ${fullData}\n\n`);
-            } else {
-                this.logger.warn("[Request] No data received from backend.");
+            try {
+                const googleResponse = JSON.parse(fullData);
+                const candidate = googleResponse.candidates?.[0];
+
+                if (candidate && candidate.content && Array.isArray(candidate.content.parts)) {
+                    this.logger.info("[Request] Splitting full Gemini response into 'thought' and 'content' chunks for pseudo-stream.");
+
+                    const thinkingParts = candidate.content.parts.filter(p => p.thought === true);
+                    const contentParts = candidate.content.parts.filter(p => p.thought !== true);
+                    const role = candidate.content.role || "model";
+
+                    // Send thinking part first
+                    if (thinkingParts.length > 0) {
+                        const thinkingResponse = {
+                            candidates: [{
+                                content: {
+                                    parts: thinkingParts,
+                                    role,
+                                },
+                                // We don't include finishReason here
+                            }],
+                            // We don't include usageMetadata here
+                        };
+                        res.write(`data: ${JSON.stringify(thinkingResponse)}\n\n`);
+                        this.logger.info(`[Request] Sent ${thinkingParts.length} thinking part(s).`);
+                    }
+
+                    // Then send content part
+                    if (contentParts.length > 0) {
+                        const contentResponse = {
+                            candidates: [{
+                                content: {
+                                    parts: contentParts,
+                                    role,
+                                },
+                                finishReason: candidate.finishReason,
+                                // Other candidate fields can be preserved if needed
+                            }],
+                            usageMetadata: googleResponse.usageMetadata,
+                        };
+                        res.write(`data: ${JSON.stringify(contentResponse)}\n\n`);
+                        this.logger.info(`[Request] Sent ${contentParts.length} content part(s).`);
+                    } else if (candidate.finishReason) {
+                        // If there's no content but a finish reason, send an empty content message with it
+                        const finalResponse = {
+                            candidates: [{
+                                content: { parts: [], role },
+                                finishReason: candidate.finishReason,
+                            }],
+                            usageMetadata: googleResponse.usageMetadata,
+                        };
+                        res.write(`data: ${JSON.stringify(finalResponse)}\n\n`);
+                    }
+                } else if (fullData) {
+                    // Fallback for responses without candidates or parts, or if parsing fails
+                    this.logger.warn("[Request] Response structure not recognized for splitting, sending as a single chunk.");
+                    res.write(`data: ${fullData}\n\n`);
+                }
+            } catch (e) {
+                this.logger.error(`[Request] Failed to parse and split Gemini response: ${e.message}. Sending raw data.`);
+                if (fullData) {
+                    res.write(`data: ${fullData}\n\n`);
+                }
             }
 
-            try {
-                const fullResponse = JSON.parse(fullData);
-                const finishReason
-                    = fullResponse.candidates?.[0]?.finishReason || "UNKNOWN";
-                this.logger.info(
-                    `✅ [Request] Response ended, reason: ${finishReason}, request ID: ${proxyRequest.request_id}`
-                );
-            } catch (e) {
-                // Ignore errors when parsing finish reason
-            }
-            // Removed [DONE] to comply with Gemini native streaming format
+            const finishReason = (() => {
+                try {
+                    return JSON.parse(fullData).candidates?.[0]?.finishReason || "UNKNOWN";
+                } catch {
+                    return "UNKNOWN";
+                }
+            })();
+            this.logger.info(
+                `✅ [Request] Response ended, reason: ${finishReason}, request ID: ${proxyRequest.request_id}`
+            );
         } catch (error) {
             this._handleRequestError(error, res);
         } finally {
@@ -496,7 +558,8 @@ class RequestHandler {
             }
             try {
                 if (lastChunk.startsWith("data: ")) {
-                    const jsonString = lastChunk.substring(6).trim();
+                    const jsonString = lastChunk.substring(6)
+                        .trim();
                     if (jsonString) {
                         const lastResponse = JSON.parse(jsonString);
                         const finishReason
@@ -685,32 +748,13 @@ class RequestHandler {
         return { error: lastError, success: false };
     }
 
-    async _streamOpenAIResponse(messageQueue, res, model, requestId) {
+    async _streamOpenAIResponse(messageQueue, res, model) {
         const streamState = { inThought: false };
         let streaming = true;
 
         while (streaming) {
             const message = await messageQueue.dequeue(30000);
             if (message.type === "STREAM_END") {
-                // Close thought tag if still in thought mode
-                if (streamState.inThought) {
-                    const closeThoughtPayload = {
-                        choices: [
-                            {
-                                delta: { content: "\n</think>\n" },
-                                finish_reason: null,
-                                index: 0,
-                            },
-                        ],
-                        created: Math.floor(Date.now() / 1000),
-                        id: `chatcmpl-${requestId}`,
-                        model,
-                        object: "chat.completion.chunk",
-                    };
-                    res.write(`data: ${JSON.stringify(closeThoughtPayload)}\n\n`);
-                    this.logger.info("[Adapter] Closed thought tag in streaming response.");
-                }
-
                 this.logger.info("[Request] Stream end signal received.");
                 res.write("data: [DONE]\n\n");
                 streaming = false;
@@ -751,7 +795,8 @@ class RequestHandler {
                 googleResponse,
                 model
             );
-            res.type("application/json").send(JSON.stringify(openAIResponse));
+            res.type("application/json")
+                .send(JSON.stringify(openAIResponse));
         } catch (e) {
             this.logger.error(`[Request] Failed to parse response: ${e.message}`);
             this._sendErrorResponse(res, 500, "Failed to parse backend response");
@@ -761,9 +806,10 @@ class RequestHandler {
     _setResponseHeaders(res, headerMessage) {
         res.status(headerMessage.status || 200);
         const headers = headerMessage.headers || {};
-        Object.entries(headers).forEach(([name, value]) => {
-            if (name.toLowerCase() !== "content-length") res.set(name, value);
-        });
+        Object.entries(headers)
+            .forEach(([name, value]) => {
+                if (name.toLowerCase() !== "content-length") res.set(name, value);
+            });
     }
 
     _handleRequestError(error, res) {
@@ -774,7 +820,8 @@ class RequestHandler {
             if (!res.writableEnded) res.end();
         } else {
             this.logger.error(`[Request] Request processing error: ${error.message}`);
-            const status = error.message.toLowerCase().includes("timeout") ? 504 : 500;
+            const status = error.message.toLowerCase()
+                .includes("timeout") ? 504 : 500;
             this._sendErrorResponse(res, status, `Proxy error: ${error.message}`);
         }
     }
@@ -838,11 +885,15 @@ class RequestHandler {
             if (!bodyObj.generationConfig) {
                 bodyObj.generationConfig = {};
             }
-            if (!bodyObj.generationConfig.thinkingConfig) {
+            if (!bodyObj.generationConfig.thinkingConfig || !bodyObj.generationConfig.thinkingConfig.includeThoughts
+                || bodyObj.generationConfig.thinkingConfig.includeThoughts === false) {
                 this.logger.info(
                     `[Proxy] ⚠️ Force thinking enabled and client did not provide config, injecting thinkingConfig. (Google Native)`
                 );
-                bodyObj.generationConfig.thinkingConfig = { includeThoughts: true };
+                bodyObj.generationConfig.thinkingConfig = {
+                    ...(bodyObj.generationConfig.thinkingConfig || {}),
+                    includeThoughts: true,
+                };
             } else {
                 this.logger.info(
                     `[Proxy] ✅ Client-provided thinking config detected, skipping force injection. (Google Native)`
@@ -924,7 +975,9 @@ class RequestHandler {
     }
 
     _generateRequestId() {
-        return `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        return `req_${Date.now()}_${Math.random()
+            .toString(36)
+            .substring(2, 11)}`;
     }
 }
 

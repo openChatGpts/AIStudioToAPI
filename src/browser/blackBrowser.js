@@ -236,6 +236,18 @@ class RequestProcessor {
                     delete bodyObj.generationConfig.thinkingConfig.thinkingLevel;
                 }
 
+                if (Array.isArray(bodyObj.contents)) {
+                    bodyObj.contents.forEach(msg => {
+                        if (Array.isArray(msg.parts)) {
+                            msg.parts.forEach(part => {
+                                if (part.thoughtSignature) {
+                                    delete part.thoughtSignature;
+                                }
+                            });
+                        }
+                    });
+                }
+
                 config.body = JSON.stringify(bodyObj);
             } catch (e) {
                 Logger.output("Error occurred while processing request body:", e.message);

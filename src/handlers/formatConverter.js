@@ -17,6 +17,7 @@ class FormatConverter {
     constructor(logger, serverSystem) {
         this.logger = logger;
         this.serverSystem = serverSystem;
+        this.streamUsage = null; // Cache for usage data in streams
     }
 
     /**
@@ -24,6 +25,7 @@ class FormatConverter {
      */
     async translateOpenAIToGoogle(openaiBody) { // eslint-disable-line no-unused-vars
         this.logger.info("[Adapter] Starting translation of OpenAI request format to Google format...");
+        this.streamUsage = null; // Reset usage cache for new stream
 
         let systemInstruction = null;
         const googleContents = [];
@@ -33,7 +35,8 @@ class FormatConverter {
             msg => msg.role === "system"
         );
         if (systemMessages.length > 0) {
-            const systemContent = systemMessages.map(msg => msg.content).join("\n");
+            const systemContent = systemMessages.map(msg => msg.content)
+                .join("\n");
             systemInstruction = {
                 parts: [{ text: systemContent }],
                 role: "system",
@@ -218,16 +221,20 @@ class FormatConverter {
      * @param {object} streamState - Optional state object to track thought mode
      */
     translateGoogleToOpenAIStream(googleChunk, modelName = "gemini-2.5-flash-lite", streamState = null) {
+        console.log(`[Adapter] Received Google chunk: ${googleChunk}`);
         if (!googleChunk || googleChunk.trim() === "") {
             return null;
         }
 
         let jsonString = googleChunk;
         if (jsonString.startsWith("data: ")) {
-            jsonString = jsonString.substring(6).trim();
+            jsonString = jsonString.substring(6)
+                .trim();
         }
 
-        if (!jsonString || jsonString === "[DONE]") return null;
+        if (jsonString === "[DONE]") {
+            return "data: [DONE]\n\n";
+        }
 
         let googleResponse;
         try {
@@ -237,7 +244,20 @@ class FormatConverter {
             return null;
         }
 
+        if (streamState && !streamState.id) {
+            streamState.id = `chatcmpl-${this._generateRequestId()}`;
+            streamState.created = Math.floor(Date.now() / 1000);
+        }
+        const streamId = streamState ? streamState.id : `chatcmpl-${this._generateRequestId()}`;
+        const created = streamState ? streamState.created : Math.floor(Date.now() / 1000);
+
+        // Cache usage data whenever it arrives.
+        if (googleResponse.usageMetadata) {
+            this.streamUsage = this._parseUsage(googleResponse);
+        }
+
         const candidate = googleResponse.candidates?.[0];
+
         if (!candidate) {
             if (googleResponse.promptFeedback) {
                 this.logger.warn(
@@ -250,8 +270,8 @@ class FormatConverter {
                     choices: [
                         { delta: { content: errorText }, finish_reason: "stop", index: 0 },
                     ],
-                    created: Math.floor(Date.now() / 1000),
-                    id: `chatcmpl-${this._generateRequestId()}`,
+                    created,
+                    id: streamId,
                     model: modelName,
                     object: "chat.completion.chunk",
                 })}\n\n`;
@@ -259,59 +279,77 @@ class FormatConverter {
             return null;
         }
 
-        const delta = {};
+        const chunksToSend = [];
 
+        // Iterate over each part in the Gemini chunk and send it as a separate OpenAI chunk
         if (candidate.content && Array.isArray(candidate.content.parts)) {
-            const imagePart = candidate.content.parts.find(p => p.inlineData);
+            for (const part of candidate.content.parts) {
+                const delta = {};
+                let hasContent = false;
 
-            if (imagePart) {
-                const image = imagePart.inlineData;
-                delta.content = `![Generated Image](data:${image.mimeType};base64,${image.data})`;
-                this.logger.info("[Adapter] Successfully parsed image from streaming response chunk.");
-            } else {
-                let contentAccumulator = "";
-                let reasoningAccumulator = "";
-
-                for (const part of candidate.content.parts) {
-                    if (part.thought === true) {
-                        reasoningAccumulator += part.text || "";
-                        // Track thought mode for proper tag closing
-                        if (streamState) {
-                            streamState.inThought = true;
-                        }
-                    } else {
-                        contentAccumulator += part.text || "";
+                if (part.thought === true) {
+                    if (part.text) {
+                        delta.reasoning_content = part.text;
+                        if (streamState) streamState.inThought = true;
+                        hasContent = true;
                     }
+                } else if (part.text) {
+                    delta.content = part.text;
+                    hasContent = true;
+                } else if (part.inlineData) {
+                    const image = part.inlineData;
+                    delta.content = `![Generated Image](data:${image.mimeType};base64,${image.data})`;
+                    this.logger.info("[Adapter] Successfully parsed image from streaming response chunk.");
+                    hasContent = true;
                 }
 
-                if (reasoningAccumulator) {
-                    delta.reasoning_content = reasoningAccumulator;
-                }
-                if (contentAccumulator) {
-                    delta.content = contentAccumulator;
+                if (hasContent) {
+                    // The 'role' should only be sent in the first chunk with content.
+                    if (streamState && !streamState.roleSent) {
+                        delta.role = "assistant";
+                        streamState.roleSent = true;
+                    }
+
+                    const openaiResponse = {
+                        choices: [{
+                            delta,
+                            finish_reason: null,
+                            index: 0,
+                        }],
+                        created,
+                        id: streamId,
+                        model: modelName,
+                        object: "chat.completion.chunk",
+                    };
+                    chunksToSend.push(`data: ${JSON.stringify(openaiResponse)}\n\n`);
                 }
             }
         }
 
-        if (!delta.content && !delta.reasoning_content && !candidate.finishReason) {
-            return null;
+        // Handle the final chunk with finish_reason and usage
+        if (candidate.finishReason) {
+            const finalResponse = {
+                choices: [{
+                    delta: {},
+                    finish_reason: candidate.finishReason,
+                    index: 0,
+                }],
+                created,
+                id: streamId,
+                model: modelName,
+                object: "chat.completion.chunk",
+                usage: null,
+            };
+
+            // Attach cached usage data to the very last message
+            if (this.streamUsage) {
+                finalResponse.usage = this.streamUsage;
+                this.streamUsage = null;
+            }
+            chunksToSend.push(`data: ${JSON.stringify(finalResponse)}\n\n`);
         }
 
-        const openaiResponse = {
-            choices: [
-                {
-                    delta,
-                    finish_reason: candidate.finishReason || null,
-                    index: 0,
-                },
-            ],
-            created: Math.floor(Date.now() / 1000),
-            id: `chatcmpl-${this._generateRequestId()}`,
-            model: modelName,
-            object: "chat.completion.chunk",
-        };
-
-        return `data: ${JSON.stringify(openaiResponse)}\n\n`;
+        return chunksToSend.length > 0 ? chunksToSend.join("") : null;
     }
 
     /**
@@ -332,6 +370,11 @@ class FormatConverter {
                 id: `chatcmpl-${this._generateRequestId()}`,
                 model: modelName,
                 object: "chat.completion",
+                usage: {
+                    completion_tokens: 0,
+                    prompt_tokens: 0,
+                    total_tokens: 0,
+                },
             };
         }
 
@@ -366,16 +409,52 @@ class FormatConverter {
             id: `chatcmpl-${this._generateRequestId()}`,
             model: modelName,
             object: "chat.completion",
-            usage: {
-                completion_tokens: googleResponse.usageMetadata?.candidatesTokenCount || 0,
-                prompt_tokens: googleResponse.usageMetadata?.promptTokenCount || 0,
-                total_tokens: googleResponse.usageMetadata?.totalTokenCount || 0,
-            },
+            usage: this._parseUsage(googleResponse),
         };
     }
 
     _generateRequestId() {
-        return `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        return `${Date.now()}_${Math.random()
+            .toString(36)
+            .substring(2, 15)}`;
+    }
+
+    _parseUsage(googleResponse) {
+        const usage = googleResponse.usageMetadata || {};
+
+        const inputTokens = usage.promptTokenCount || 0;
+        const toolPromptTokens = usage.toolUsePromptTokenCount || 0;
+
+        const completionTextTokens = usage.candidatesTokenCount || 0;
+        const reasoningTokens = usage.thoughtsTokenCount || 0;
+        let completionImageTokens = 0;
+
+        if (Array.isArray(usage.candidatesTokensDetails)) {
+            for (const d of usage.candidatesTokensDetails) {
+                if (d?.modality === "IMAGE") {
+                    completionImageTokens += d.tokenCount || 0;
+                }
+            }
+        }
+
+        const promptTokens = inputTokens + toolPromptTokens;
+        const totalCompletionTokens = completionTextTokens + reasoningTokens;
+        const totalTokens = googleResponse.usageMetadata?.totalTokenCount || 0;
+
+        return {
+            completion_tokens: totalCompletionTokens,
+            completion_tokens_details: {
+                image_tokens: completionImageTokens,
+                output_text_tokens: completionTextTokens,
+                reasoning_tokens: reasoningTokens,
+            },
+            prompt_tokens: promptTokens,
+            prompt_tokens_details: {
+                text_tokens: inputTokens,
+                tool_tokens: toolPromptTokens,
+            },
+            total_tokens: totalTokens,
+        };
     }
 }
 
