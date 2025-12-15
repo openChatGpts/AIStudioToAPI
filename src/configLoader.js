@@ -62,7 +62,7 @@ class ConfigLoader {
                 = parseInt(process.env.SWITCH_ON_USES, 10) ?? config.switchOnUses;
         if (process.env.MAX_RETRIES)
             config.maxRetries
-                = parseInt(process.env.MAX_RETRIES, 10) || config.maxRetries;
+                = Math.max(1, parseInt(process.env.MAX_RETRIES, 10)) || config.maxRetries;
         if (process.env.RETRY_DELAY)
             config.retryDelay
                 = parseInt(process.env.RETRY_DELAY, 10) || config.retryDelay;

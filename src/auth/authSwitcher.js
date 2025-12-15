@@ -173,6 +173,10 @@ class AuthSwitcher {
             this.logger.warn(
                 `⚠️ [Auth] Request failed - failure count: ${this.failureCount}/${this.config.failureThreshold} (Current account index: ${this.currentAuthIndex})`
             );
+        } else {
+            this.logger.warn(
+                `⚠️ [Auth] Request failed - failure count: ${this.failureCount} (Current account index: ${this.currentAuthIndex})`
+            );
         }
 
         const isImmediateSwitch = this.config.immediateSwitchStatusCodes.includes(

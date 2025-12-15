@@ -77,8 +77,11 @@ class RequestHandler {
         if (isGenerativeRequest) {
             const usageCount = this.authSwitcher.incrementUsageCount();
             if (usageCount > 0) {
+                const rotationCountText = this.config.switchOnUses > 0
+                    ? `${usageCount}/${this.config.switchOnUses}`
+                    : `${usageCount}`;
                 this.logger.info(
-                    `[Request] Generation request - account rotation count: ${usageCount}/${this.config.switchOnUses} (Current account: ${this.currentAuthIndex})`
+                    `[Request] Generation request - account rotation count: ${rotationCountText} (Current account: ${this.currentAuthIndex})`
                 );
                 if (this.authSwitcher.shouldSwitchByUsage()) {
                     this.needsSwitchingAfterRequest = true;
@@ -194,8 +197,11 @@ class RequestHandler {
         // Handle usage counting
         const usageCount = this.authSwitcher.incrementUsageCount();
         if (usageCount > 0) {
+            const rotationCountText = this.config.switchOnUses > 0
+                ? `${usageCount}/${this.config.switchOnUses}`
+                : `${usageCount}`;
             this.logger.info(
-                `[Request] OpenAI generation request - account rotation count: ${usageCount}/${this.config.switchOnUses} (Current account: ${this.currentAuthIndex})`
+                `[Request] OpenAI generation request - account rotation count: ${rotationCountText} (Current account: ${this.currentAuthIndex})`
             );
             if (this.authSwitcher.shouldSwitchByUsage()) {
                 this.needsSwitchingAfterRequest = true;
