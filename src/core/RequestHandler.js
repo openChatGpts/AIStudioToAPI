@@ -59,6 +59,12 @@ class RequestHandler {
 
     /**
      * Handle browser recovery when connection is lost
+     *
+     * Important: isSystemBusy flag management strategy:
+     * - Direct recovery (recoveryAuthIndex > 0): We manually set and reset isSystemBusy
+     * - Switch to next account (recoveryAuthIndex = 0): Let switchToNextAuth() manage isSystemBusy internally
+     * - This prevents the bug where isSystemBusy is set here, then switchToNextAuth() checks it and returns "already in progress"
+     *
      * @returns {boolean} true if recovery successful, false otherwise
      */
     async _handleBrowserRecovery(res) {
@@ -77,19 +83,24 @@ class RequestHandler {
         this.logger.error(
             "❌ [System] Browser WebSocket connection disconnected! Possible process crash. Attempting recovery..."
         );
-        this.authSwitcher.isSystemBusy = true;
+
         const recoveryAuthIndex = this.currentAuthIndex || 0;
-        let wasRecoveryAttempt = false;
+        let wasDirectRecovery = false;
         let recoverySuccess = false;
 
         try {
             if (recoveryAuthIndex > 0) {
-                wasRecoveryAttempt = true;
+                // Direct recovery: we manage isSystemBusy ourselves
+                wasDirectRecovery = true;
+                this.authSwitcher.isSystemBusy = true;
+                this.logger.info(`[System] Set isSystemBusy=true for direct recovery to account #${recoveryAuthIndex}`);
+
                 await this.browserManager.launchOrSwitchContext(recoveryAuthIndex);
                 this.logger.info(`✅ [System] Browser successfully recovered to account #${recoveryAuthIndex}!`);
                 recoverySuccess = true;
             } else if (this.authSource.availableIndices.length > 0) {
                 this.logger.warn("⚠️ [System] No current account, attempting to switch to first available account...");
+                // Don't set isSystemBusy here - let switchToNextAuth manage it
                 const result = await this.authSwitcher.switchToNextAuth();
                 if (!result.success) {
                     this.logger.error(`❌ [System] Failed to switch to available account: ${result.reason}`);
@@ -107,7 +118,7 @@ class RequestHandler {
         } catch (error) {
             this.logger.error(`❌ [System] Recovery failed: ${error.message}`);
 
-            if (wasRecoveryAttempt && this.authSource.availableIndices.length > 1) {
+            if (wasDirectRecovery && this.authSource.availableIndices.length > 1) {
                 this.logger.warn("⚠️ [System] Attempting to switch to alternative account...");
                 try {
                     const result = await this.authSwitcher.switchToNextAuth();
@@ -135,7 +146,11 @@ class RequestHandler {
                 recoverySuccess = false;
             }
         } finally {
-            this.authSwitcher.isSystemBusy = false;
+            // Only reset if we set it (for direct recovery attempt)
+            if (wasDirectRecovery) {
+                this.logger.info("[System] Resetting isSystemBusy=false in recovery finally block");
+                this.authSwitcher.isSystemBusy = false;
+            }
         }
 
         return recoverySuccess;
