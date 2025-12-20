@@ -13,7 +13,7 @@
 - 🔐 **身份验证**：基于 API 密钥的安全认证机制
 - 🐳 **Docker 支持**：通过 Docker 和 Docker Compose 轻松部署
 - 📝 **模型支持**：通过 AI Studio 访问各种 Gemini 模型，包括生图模型
-- 🎨 **主页展示控制**：提供可视化的 Web 控制台，支持账户管理、VNC 登录等操作
+- 🎨 **主页展示控制**：提供可视化的 Web 控制台，支持账号管理、VNC 登录等操作
 
 ## 🚀 快速开始
 
@@ -47,9 +47,9 @@ npm start
 
 API 服务将在 `http://localhost:7860` 上运行。
 
-服务启动后，您可以在浏览器中访问 `http://localhost:7860` 打开 Web 控制台主页，在这里可以查看账户状态和服务状态。
+服务启动后，您可以在浏览器中访问 `http://localhost:7860` 打开 Web 控制台主页，在这里可以查看账号状态和服务状态。
 
-> **注意**：Windows 本地运行不支持通过 VNC 在线添加账户，需要使用 `npm run setup-auth` 脚本添加账户。VNC 登录功能仅在 Linux 服务器上的 Docker 部署中可用。
+> ⚠ **注意：** Windows 本地运行不支持通过 VNC 在线添加账号，需要使用 `npm run setup-auth` 脚本添加账号。当前 VNC 登录功能仅在 Linux 服务器上的 Docker 容器中可用。
 
 ### ☁ 云端部署（Linux VPS）
 
@@ -116,23 +116,23 @@ sudo docker compose logs -f
 sudo docker compose down
 ```
 
-#### 🔑 步骤 2：账户管理
+#### 🔑 步骤 2：账号管理
 
-部署后，您需要使用以下方式之一添加 Google 账户：
+部署后，您需要使用以下方式之一添加 Google 账号：
 
 **方法 1：VNC 登录（推荐）**
 
-- 在浏览器中访问部署的服务地址（如 `http://your-server:7860`）并点击"添加账户"按钮
+- 在浏览器中访问部署的服务地址（例如 `http://your-server:7860`）并点击「添加账号」按钮
 - 将跳转到 VNC 页面，显示浏览器实例
-- 登录您的 Google 账户，登录完成后点击"保存"按钮
-- 账户将自动保存为 `auth-N.json`（N 从 0 开始）
+- 登录您的 Google 账号，登录完成后点击「保存」按钮
+- 账号将自动保存为 `auth-N.json`（N 从 0 开始）
 
 **方法 2：上传认证文件（传统方式）**
 
 - 在 Windows 机器上运行 `npm run setup-auth` 生成认证文件
 - 将 `auth-N.json` 文件（N 从 0 开始）上传到挂载的 `/path/to/auth` 目录
 
-> **注意**：不再支持通过环境变量注入认证信息。
+> ⚠ 目前暂不支持通过环境变量注入认证信息。
 
 #### 🌐 步骤 3（可选）：使用 Nginx 反向代理
 

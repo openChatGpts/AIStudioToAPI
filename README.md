@@ -49,7 +49,7 @@ The API server will be available at `http://localhost:7860`
 
 After the service starts, you can access `http://localhost:7860` in your browser to open the web console homepage, where you can view account status and service status.
 
-> **Note**: Windows local deployment does not support adding accounts via VNC online. You need to use the `npm run setup-auth` script to add accounts. VNC login is only available in Docker deployments on Linux servers.
+> ⚠ **Note:** Windows local deployment does not support adding accounts via VNC online. You need to use the `npm run setup-auth` script to add accounts. VNC login is only available in Docker deployments on Linux servers.
 
 ### ☁ Cloud Deployment (Linux VPS)
 
@@ -132,7 +132,7 @@ After deployment, you need to add Google accounts using one of these methods:
 - Run `npm run setup-auth` on a Windows machine to generate auth files
 - Upload `auth-N.json` files (N starts from 0) to the mounted `/path/to/auth` directory
 
-> **Note**: Environment variable-based auth injection is no longer supported.
+> ⚠ Environment variable-based auth injection is no longer supported.
 
 #### 🌐 Step 3 (Optional): Nginx Reverse Proxy
 
