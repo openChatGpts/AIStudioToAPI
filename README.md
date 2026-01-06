@@ -1,63 +1,63 @@
 # Google AI Studio to API Adapter
 
-[中文文档](README_CN.md) | English
+中文文档 | [English](README_EN.md)
 
-A tool that wraps Google AI Studio web interface to provide OpenAI API and Gemini API compatible endpoints. The service acts as a proxy, converting API requests to browser interactions with the AI Studio web interface.
+一个将 Google AI Studio 网页端封装为兼容 OpenAI API 和 Gemini API 的工具。该服务将充当代理，将 API 请求转换为与 AI Studio 网页界面的浏览器交互。
 
-> **👏 Acknowledgements**: This project is forked from [ais2api](https://github.com/Ellinav/ais2api) by [Ellinav](https://github.com/Ellinav). We express our sincere gratitude to the original author for creating this excellent foundation.
+> **👏 鸣谢**：本项目为基于 [Ellinav](https://github.com/Ellinav) 的 [ais2api](https://github.com/Ellinav/ais2api) 分支进行的二次开发，我们对原作者创立这个优秀的项目表示诚挚的感谢。
 
-## ✨ Features
+## ✨ 功能特性
 
-- 🔄 **API Compatibility**: Compatible with both OpenAI API and Gemini API formats
-- 🌐 **Web Automation**: Uses browser automation to interact with AI Studio web interface
-- 🔐 **Authentication**: Secure API key-based authentication
-- 🐳 **Docker Support**: Easy deployment with Docker and Docker Compose
-- 📝 **Model Support**: Access to various Gemini models through AI Studio, including image generation models
-- 🎨 **Homepage Display Control**: Provides a visual web console with account management, VNC login, and more
+- 🔄 **API 兼容性**：同时兼容 OpenAI API 和 Gemini API 格式
+- 🌐 **网页自动化**：使用浏览器自动化技术与 AI Studio 网页界面交互
+- 🔐 **身份验证**：基于 API 密钥的安全认证机制
+- 🐳 **Docker 支持**：通过 Docker 和 Docker Compose 轻松部署
+- 📝 **模型支持**：通过 AI Studio 访问各种 Gemini 模型，包括生图模型
+- 🎨 **主页展示控制**：提供可视化的 Web 控制台，支持账号管理、VNC 登录等操作
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### 💻 Local Development (Windows Only)
+### 💻 本地运行（仅支持 Windows）
 
-1. Clone the repository:
+1. 克隆仓库：
 
 ```powershell
 git clone https://github.com/iBenzene/AIStudioToAPI.git
 cd AIStudioToAPI
 ```
 
-2. Run the setup script:
+2. 运行快速设置脚本：
 
 ```powershell
 npm run setup-auth
 ```
 
-This script will:
+该脚本将：
 
-- Automatically download the Camoufox browser (a privacy-focused Firefox fork)
-- Launch the browser and navigate to AI Studio automatically
-- Save your authentication credentials locally
+- 自动下载 Camoufox 浏览器（一个注重隐私的 Firefox 分支）
+- 启动浏览器并自动导航到 AI Studio
+- 在本地保存您的身份验证凭据
 
-3. Start the service:
+3. 启动服务：
 
 ```powershell
 npm install
 npm start
 ```
 
-The API server will be available at `http://localhost:7860`
+API 服务将在 `http://localhost:7860` 上运行。
 
-After the service starts, you can access `http://localhost:7860` in your browser to open the web console homepage, where you can view account status and service status.
+服务启动后，您可以在浏览器中访问 `http://localhost:7860` 打开 Web 控制台主页，在这里可以查看账号状态和服务状态。
 
-> ⚠ **Note:** Windows local deployment does not support adding accounts via VNC online. You need to use the `npm run setup-auth` script to add accounts. VNC login is only available in Docker deployments on Linux servers.
+> ⚠ **注意：** Windows 本地运行不支持通过 VNC 在线添加账号，需要使用 `npm run setup-auth` 脚本添加账号。当前 VNC 登录功能仅在 Linux 服务器上的 Docker 容器中可用。
 
-### ☁ Cloud Deployment (Linux VPS)
+### ☁ 云端部署（Linux VPS）
 
-For production deployment on a server (Linux VPS), you can now deploy directly using Docker without pre-extracting authentication credentials.
+在生产环境中部署到服务器（Linux VPS）时，现在可以直接使用 Docker 部署，无需预先提取身份验证凭据。
 
-#### 🚢 Step 1: Deploy on Server
+#### 🚢 步骤 1：部署到服务器
 
-##### 🐋 Option 1: Docker Command
+##### 🐋 方式 1：Docker 命令
 
 ```bash
 docker run -d \
@@ -70,16 +70,16 @@ docker run -d \
   ghcr.io/ibenzene/aistudio-to-api:latest
 ```
 
-Parameters:
+参数说明：
 
-- `-p 7860:7860`: API server port (if using a reverse proxy, strongly consider `127.0.0.1:7860`)
-- `-v /path/to/auth:/app/configs/auth`: Mount directory containing auth files
-- `-e API_KEYS`: Comma-separated list of API keys for authentication
-- `-e TZ=Asia/Shanghai`: Timezone for logs (optional, defaults to system timezone)
+- `-p 7860:7860`：API 服务器端口（如果使用反向代理，强烈建议改成 127.0.0.1:7860）
+- `-v /path/to/auth:/app/configs/auth`：挂载包含认证文件的目录
+- `-e API_KEYS`：用于身份验证的 API 密钥列表（使用逗号分隔）
+- `-e TZ=Asia/Shanghai`：时区设置（可选，默认使用系统时区）
 
-##### 📦 Option 2: Docker Compose
+##### 📦 方式 2：Docker Compose
 
-Create a `docker-compose.yml` file:
+创建 `docker-compose.yml` 文件：
 
 ```yaml
 name: aistudio-to-api
@@ -95,133 +95,133 @@ services:
       - ./auth:/app/configs/auth
     environment:
       API_KEYS: your-api-key-1,your-api-key-2
-      TZ: Asia/Shanghai # Timezone for logs (optional)
+      TZ: Asia/Shanghai # 日志时区设置（可选）
 ```
 
-Start the service:
+启动服务：
 
 ```bash
 sudo docker compose up -d
 ```
 
-View logs:
+查看日志：
 
 ```bash
 sudo docker compose logs -f
 ```
 
-Stop the service:
+停止服务：
 
 ```bash
 sudo docker compose down
 ```
 
-**Proxy Configuration (Optional):** If you need to use a proxy to access Google services, add `-e HTTP_PROXY=http://your-proxy:port -e HTTPS_PROXY=http://your-proxy:port` to the Docker command, or add these environment variables to your `docker-compose.yml`.
+**代理配置（可选）：** 如需使用代理访问 Google 服务，在 Docker 命令中添加 `-e HTTP_PROXY=http://your-proxy:port -e HTTPS_PROXY=http://your-proxy:port`，或在 `docker-compose.yml` 的 `environment` 中添加这两个环境变量。
 
-#### 🔑 Step 2: Account Management
+#### 🔑 步骤 2：账号管理
 
-After deployment, you need to add Google accounts using one of these methods:
+部署后，您需要使用以下方式之一添加 Google 账号：
 
-**Method 1: VNC-Based Login (Recommended)**
+**方法 1：VNC 登录（推荐）**
 
-- Access the deployed service address in your browser (e.g., `http://your-server:7860`) and click the "Add User" button
-- You'll be redirected to a VNC page with a browser instance
-- Log in to your Google account, then click the "Save" button after login is complete
-- The account will be automatically saved as `auth-N.json` (N starts from 0)
+- 在浏览器中访问部署的服务地址（例如 `http://your-server:7860`）并点击「添加账号」按钮
+- 将跳转到 VNC 页面，显示浏览器实例
+- 登录您的 Google 账号，登录完成后点击「保存」按钮
+- 账号将自动保存为 `auth-N.json`（N 从 0 开始）
 
-**Method 2: Upload Auth Files**
+**方法 2：上传认证文件**
 
-- Run `npm run setup-auth` on a Windows machine to generate auth files
-- In the web console, click "Upload Auth" to upload the auth JSON file, or manually upload to the mounted `/path/to/auth` directory
+- 在 Windows 机器上运行 `npm run setup-auth` 生成认证文件
+- 在网页控制台，点击「上传 Auth」，上传 auth 的 JSON 文件，或手动上传到挂载的 `/path/to/auth` 目录
 
-> 💡 **Tip**: You can also download auth files from an existing server and upload them to a new server. Click the "Download Auth" button for the corresponding account in the web console to download the auth file.
+> 💡 **提示**：您也可以从已有的服务器下载 auth 文件，然后上传到新的服务器。在网页控制台点击对应账号的「下载 Auth」按钮即可下载 auth 文件。
 
-> ⚠ Environment variable-based auth injection is no longer supported.
+> ⚠ 目前暂不支持通过环境变量注入认证信息。
 
-#### 🌐 Step 3 (Optional): Nginx Reverse Proxy
+#### 🌐 步骤 3（可选）：使用 Nginx 反向代理
 
-If you need to access via a domain name or want unified management at the reverse proxy layer (e.g., configure HTTPS, load balancing, etc.), you can use Nginx.
+如果需要通过域名访问或希望在反向代理层统一管理（例如配置 HTTPS、负载均衡等），可以使用 Nginx。
 
-> 📖 For detailed Nginx configuration instructions, see: [Nginx Reverse Proxy Configuration](docs/en/nginx-setup.md)
+> 📖 详细的 Nginx 配置说明请参阅：[Nginx 反向代理配置文档](docs/zh/nginx-setup.md)
 
-### 🐾 Claw Cloud Run Deployment
+### 🐾 Claw Cloud Run 部署
 
-Deploy directly on Claw Cloud Run, a fully managed container platform.
+支持直接部署到 Claw Cloud Run，全托管的容器平台。
 
-> 📖 For detailed deployment instructions, see: [Deploy on Claw Cloud Run](docs/en/claw-cloud-run.md)
+> 📖 详细部署说明请参阅：[部署到 Claw Cloud Run](docs/zh/claw-cloud-run.md)
 
-### 🦓 Zeabur Deployment
+### 🦓 Zeabur 部署
 
-Deploy on the Zeabur container platform.
+支持部署到 Zeabur 容器平台。
 
-> ⚠ **Note:** Zeabur's free tier provides only $5 credits per month, which is not enough to run 24/7. Please pause the service when not in use!
+> ⚠ **注意：** Zeabur 的免费额度每月仅 5 美元，不足以支持 24 小时运行。不使用时请务必暂停服务！
 
-> 📖 For detailed deployment instructions, see: [Deploy on Zeabur](docs/en/zeabur.md)
+> 📖 详细部署说明请参阅：[部署到 Zeabur](docs/zh/zeabur.md)
 
-## 📡 API Usage
+## 📡 使用 API
 
-### 🤖 OpenAI-Compatible API
+### 🤖 OpenAI 兼容 API
 
-This endpoint is processed and then forwarded to the official Gemini API format endpoint.
+此端点处理后转发到官方 Gemini API 格式端点。
 
-- `GET /v1/models`: List models.
-- `POST /v1/chat/completions`: Chat completion and image generation, supports non-streaming, real streaming, and fake streaming.
+- `GET /v1/models`: 列出模型。
+- `POST /v1/chat/completions`: 聊天补全和图片生成，支持非流式、真流式和假流式。
 
-### ♊ Gemini Native API Format
+### ♊ Gemini 原生 API 格式
 
-This endpoint is forwarded to the official Gemini API format endpoint.
+此端点转发到官方 Gemini API 格式端点。
 
-- `GET /v1beta/models`: List available Gemini models.
-- `POST /v1beta/models/{model_name}:generateContent`: Generate content and images.
-- `POST /v1beta/models/{model_name}:streamGenerateContent`: Stream content and image generation, supports real and fake streaming.
+- `GET /v1beta/models`: 列出可用的 Gemini 模型。
+- `POST /v1beta/models/{model_name}:generateContent`: 生成内容和图片。
+- `POST /v1beta/models/{model_name}:streamGenerateContent`: 流式生成内容和图片，支持真流式和假流式。
 
-> 📖 For detailed API usage examples, see: [API Usage Examples](docs/en/api-examples.md)
+> 📖 详细的 API 使用示例请参阅：[API 使用示例文档](docs/zh/api-examples.md)
 
-## 🧰 Configuration
+## 🧰 相关配置
 
-### 🔧 Environment Variables
+### 🔧 环境变量
 
-#### 📱 Application Configuration
+#### 📱 应用配置
 
-| Variable                    | Description                                                                    | Default              |
-| :-------------------------- | :----------------------------------------------------------------------------- | :------------------- |
-| `API_KEYS`                  | Comma-separated list of valid API keys for authentication.                     | `123456`             |
-| `PORT`                      | API server port.                                                               | `7860`               |
-| `HOST`                      | Server listening host address.                                                 | `0.0.0.0`            |
-| `ICON_URL`                  | Custom favicon URL for the console. Supports ICO, PNG, SVG, etc.               | `/AIStudio_logo.svg` |
-| `SECURE_COOKIES`            | Enable secure cookies. `true` for HTTPS only, `false` for both HTTP and HTTPS. | `false`              |
-| `RATE_LIMIT_MAX_ATTEMPTS`   | Maximum failed login attempts allowed within the time window (0 to disable).   | `5`                  |
-| `RATE_LIMIT_WINDOW_MINUTES` | Time window for rate limiting in minutes.                                      | `15`                 |
+| 变量名                      | 描述                                                          | 默认值               |
+| :-------------------------- | :------------------------------------------------------------ | :------------------- |
+| `API_KEYS`                  | 用于身份验证的有效 API 密钥列表（使用逗号分隔）。             | `123456`             |
+| `PORT`                      | API 服务器端口。                                              | `7860`               |
+| `HOST`                      | 服务器监听的主机地址。                                        | `0.0.0.0`            |
+| `ICON_URL`                  | 用于自定义控制台的 favicon 图标。支持 ICO, PNG, SVG 等格式。  | `/AIStudio_logo.svg` |
+| `SECURE_COOKIES`            | 是否启用安全 Cookie。`true` 表示仅支持 HTTPS 协议访问控制台。 | `false`              |
+| `RATE_LIMIT_MAX_ATTEMPTS`   | 时间窗口内控制台允许的最大失败登录尝试次数（设为 0 禁用）。   | `5`                  |
+| `RATE_LIMIT_WINDOW_MINUTES` | 速率限制的时间窗口长度（分钟）。                              | `15`                 |
 
-#### 🌐 Proxy Configuration
+#### 🌐 代理配置
 
-| Variable                        | Description                                                                                          | Default   |
-| :------------------------------ | :--------------------------------------------------------------------------------------------------- | :-------- |
-| `INITIAL_AUTH_INDEX`            | Initial authentication index to use on startup.                                                      | `0`       |
-| `MAX_RETRIES`                   | Maximum number of retries for failed requests (only effective for fake streaming and non-streaming). | `3`       |
-| `RETRY_DELAY`                   | Delay between retries in milliseconds.                                                               | `2000`    |
-| `SWITCH_ON_USES`                | Number of requests before automatically switching accounts (0 to disable).                           | `40`      |
-| `FAILURE_THRESHOLD`             | Number of consecutive failures before switching accounts (0 to disable).                             | `3`       |
-| `IMMEDIATE_SWITCH_STATUS_CODES` | HTTP status codes that trigger immediate account switching (comma-separated).                        | `429,503` |
+| 变量名                          | 描述                                                 | 默认值    |
+| :------------------------------ | :--------------------------------------------------- | :-------- |
+| `INITIAL_AUTH_INDEX`            | 启动时使用的初始身份验证索引。                       | `0`       |
+| `MAX_RETRIES`                   | 请求失败后的最大重试次数（仅对假流式和非流式生效）。 | `3`       |
+| `RETRY_DELAY`                   | 两次重试之间的间隔（毫秒）。                         | `2000`    |
+| `SWITCH_ON_USES`                | 自动切换帐户前允许的请求次数（设为 0 禁用）。        | `40`      |
+| `FAILURE_THRESHOLD`             | 切换帐户前允许的连续失败次数（设为 0 禁用）。        | `3`       |
+| `IMMEDIATE_SWITCH_STATUS_CODES` | 触发立即切换帐户的 HTTP 状态码（逗号分隔）。         | `429,503` |
 
-#### 🗒️ Other Configuration
+#### 🗒️ 其他配置
 
-| Variable            | Description                                                           | Default |
-| :------------------ | :-------------------------------------------------------------------- | :------ |
-| `STREAMING_MODE`    | Streaming mode. `real` for real streaming, `fake` for fake streaming. | `real`  |
-| `FORCE_THINKING`    | Force enable thinking mode for all requests.                          | `false` |
-| `FORCE_WEB_SEARCH`  | Force enable web search for all requests.                             | `false` |
-| `FORCE_URL_CONTEXT` | Force enable URL context for all requests.                            | `false` |
+| 变量名              | 描述                                             | 默认值  |
+| :------------------ | :----------------------------------------------- | :------ |
+| `STREAMING_MODE`    | 流式传输模式。`real` 为真流式，`fake` 为假流式。 | `real`  |
+| `FORCE_THINKING`    | 强制为所有请求启用思考模式。                     | `false` |
+| `FORCE_WEB_SEARCH`  | 强制为所有请求启用网络搜索。                     | `false` |
+| `FORCE_URL_CONTEXT` | 强制为所有请求启用 URL 上下文。                  | `false` |
 
-### 🧠 Model List Configuration
+### 🧠 模型列表配置
 
-Edit `configs/models.json` to customize available models and their settings.
+编辑 `configs/models.json` 以自定义可用模型及其设置。
 
-## 📄 License
+## 📄 许可证
 
-This project is a fork of [**ais2api**](https://github.com/Ellinav/ais2api) by [**Ellinav**](https://github.com/Ellinav), and fully adopts the CC BY-NC 4.0 license used by the upstream project. All usage, distribution, and modification activities must comply with all terms of the original license. See the full license text in [LICENSE](LICENSE).
+本项目基于 [**ais2api**](https://github.com/Ellinav/ais2api)（作者：[**Ellinav**](https://github.com/Ellinav)）分支开发，并完全沿用上游项目所采用的 CC BY-NC 4.0 许可证，其使用、分发与修改行为均需遵守原有许可证的全部条款，完整许可的内容请参见 [LICENSE](LICENSE) 文件。
 
-### ©️ Copyright / Attribution
+### ©️ 版权 / 署名
 
-- Original work Copyright © [Ellinav](https://github.com/Ellinav)
-- Modifications and additions Copyright © 2024 [iBenzene](https://github.com/iBenzene)、[bbbugg](https://github.com/bbbugg)、[挈挈](https://github.com/ljh156705) and contributors
+- 原始作品 Copyright © [Ellinav](https://github.com/Ellinav)
+- 修改与新增部分 Copyright © 2024 [iBenzene](https://github.com/iBenzene)、[bbbugg](https://github.com/bbbugg)、[挈挈](https://github.com/ljh156705)及其他贡献者
